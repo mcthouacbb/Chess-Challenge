@@ -118,6 +118,7 @@ namespace ChessChallenge.UCI
         void GoCommand(string[] args)
         {
             int wtime = 0, btime = 0;
+            int winc = 0, binc = 0;
             API.Board apiBoard = new API.Board(board);
             for (int i = 0; i < args.Length; i++)
             {
@@ -129,14 +130,25 @@ namespace ChessChallenge.UCI
                 {
                     btime = Int32.Parse(args[i + 1]);
                 }
+                else if (args[i] == "winc")
+                {
+                    winc = Int32.Parse(args[i + 1]);
+                }
+                else if (args[i] == "binc")
+                {
+                    binc = Int32.Parse(args[i + 1]);
+                }
             }
             if (!apiBoard.IsWhiteToMove)
             {
                 int tmp = wtime;
                 wtime = btime;
                 btime = tmp;
+                tmp = winc;
+                winc = binc;
+                binc = tmp;
             }
-            Timer timer = new Timer(wtime, btime, 0);
+            Timer timer = new Timer(wtime, btime, 0, winc);
             API.Move move = bot.Think(apiBoard, timer);
             Console.WriteLine($"bestmove {move.ToString().Substring(7, move.ToString().Length - 8)}");
         }

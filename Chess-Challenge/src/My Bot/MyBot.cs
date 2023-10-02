@@ -62,7 +62,7 @@ public class MyBot : IChessBot
 	// put the delta here to make c# shut up about unitialized variables
 	// bunch of variables
 	// "it" is used a ton
-	private int nodes, phase, packedEval, sq, it, delta;
+	private int nodes, phase, packedEval, sq, it, delta, hardTimeBound;
 
 	// An array of piece square scores
 	// indexed by 8 * piece + square (piece should be 0-5) for (pawn - king)
@@ -116,29 +116,37 @@ public class MyBot : IChessBot
 			nodes = 0;
 			int benchDepth = timer.OpponentMillisecondsRemaining;
 			int startTime = timer.MillisecondsElapsedThisTurn;
+
+
+			hardTimeBound = timer.MillisecondsRemaining / 10 + timer.IncrementMilliseconds * 3 / 2;
+			// iterative deepening and aspiration windows loop
 			for (int depth = 1, alpha = -64000, beta = 64000; depth <= benchDepth; delta *= 2)
 			{
 				it = Search(depth, alpha, beta, false, 0);
-				//Console.WriteLine($"Mine Depth: {depth}, Move: {bestMoveRoot} eval: {eval}, nodes: {nodes}, alpha: {alpha}, beta: {beta}");
-				//Console.WriteLine($"Timer: {timer.MillisecondsElapsedThisTurn}, t: {timer.MillisecondsRemaining / 15}");
-				if (timer.MillisecondsElapsedThisTurn > timer.MillisecondsRemaining / 50)
-					break;
+
+				// uncomment for some extra info
+				// Console.WriteLine($"Mine Depth: {depth}, Move: {bestMoveRoot} eval: {it}, nodes: {nodes}, alpha: {alpha}, beta: {beta}");
+
+				// return a move on soft-timeout
+				if (timer.MillisecondsElapsedThisTurn > hardTimeBound / 4)
+					// utilizes partial search results
+					// fail-high and in-window results can be accepted, but fail-low results cannot be used
+					return bestMoveRoot;
 				if (it <= alpha)
+					// fail low, widen alpha
 					alpha -= delta;
 				else if (it >= beta)
+					// fail high, widen beta
 					beta += delta;
 				else
 				{
+					// in window, increase depth and reset delta
+					// at low depths, the delta is set to a large number, and aspiration windows is disabled
+					// at higher depths, we center the search window around the previous evaluation
 					delta = ++depth <= 6 ? 64000 : 15;
 					alpha = it - delta;
 					beta = it + delta;
 				}
-
-				// if this depth takes up more than 50% of allocated time, there is a good chance that the next search won't finish.
-				//if (shouldStop || timer.MillisecondsElapsedThisTurn > millisAlloced / 2)
-				//break;
-				//Console.WriteLine(nodes);
-				//Console.ForegroundColor = ConsoleColor.Green;
 			}
 			int endTime = timer.MillisecondsElapsedThisTurn;
 			int time = endTime - startTime;
@@ -148,6 +156,7 @@ public class MyBot : IChessBot
 		}
 #endif
 
+		hardTimeBound = timer.MillisecondsRemaining / 10 + timer.IncrementMilliseconds;
 		// iterative deepening and aspiration windows loop
 		for (int depth = 1, alpha = -64000, beta = 64000;; delta *= 2)
 		{
@@ -157,7 +166,7 @@ public class MyBot : IChessBot
 			// Console.WriteLine($"Mine Depth: {depth}, Move: {bestMoveRoot} eval: {it}, nodes: {nodes}, alpha: {alpha}, beta: {beta}");
 
 			// return a move on soft-timeout
-			if (timer.MillisecondsElapsedThisTurn > timer.MillisecondsRemaining / 50)
+			if (timer.MillisecondsElapsedThisTurn > hardTimeBound / 4)
 				// utilizes partial search results
 				// fail-high and in-window results can be accepted, but fail-low results cannot be used
 				return bestMoveRoot;
@@ -374,7 +383,7 @@ public class MyBot : IChessBot
 
 				// we return alpha to prevent the pv from being changed after time is up
 				// this allows for partial search results to be used(which saves tokens)(it might also gain elo but I'm not sure)
-				if (++nodes % 2048 == 0 && timer.MillisecondsElapsedThisTurn > timer.MillisecondsRemaining / 20 || shouldStop)
+				if (++nodes % 2048 == 0 && timer.MillisecondsElapsedThisTurn > hardTimeBound || shouldStop)
 				{
 					shouldStop = true;
 					return alpha;

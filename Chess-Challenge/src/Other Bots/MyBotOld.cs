@@ -109,7 +109,7 @@ public class MyBotOld : IChessBot
 
 
 		// iterative deepening and aspiration windows loop
-		for (int depth = 1, alpha = -64000, beta = 64000; ; delta *= 2)
+		for (int depth = 1, alpha = -64000, beta = 64000;; delta *= 2)
 		{
 			it = Search(depth, alpha, beta, false, 0);
 
