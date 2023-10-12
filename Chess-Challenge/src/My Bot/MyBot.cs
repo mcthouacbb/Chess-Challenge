@@ -384,7 +384,7 @@ public class MyBot : IChessBot
 				/* Late Move Pruning
 				 * If this node does not seem promising and the depth is low enough
 				 * We stop searching if we've played a certain number of depth dependent moves
-				 * Most top engines use depth <= 8 and movesPlayed >= 3 + depth * depth / (improving ? 2 : 1) as the canonical formula
+				 * Most top engines use depth <= 8 and movesPlayed >= 3 + depth * depth / (improving ? 1 : 2) as the canonical formula
 				 * But this formula didn't work for my challenge engine
 				 */
 				// Futility Pruning
